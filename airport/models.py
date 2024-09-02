@@ -48,6 +48,10 @@ class Crew(models.Model):
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
 
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
+
 
 class Flight(models.Model):
     route = models.ForeignKey(Route, on_delete=models.CASCADE)
