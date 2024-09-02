@@ -8,7 +8,7 @@ from .serializers import (
     CrewSerializer,
     FlightSerializer,
     OrderSerializer,
-    TicketSerializer,
+    TicketSerializer, FlightListSerializer, OrderListSerializer, AirplaneListSerializer, AirplaneRetrieveSerializer,
 )
 
 
@@ -31,6 +31,20 @@ class AirplaneViewSet(viewsets.ModelViewSet):
     queryset = Airplane.objects.all()
     serializer_class = AirplaneSerializer
 
+    def get_serializer_class(self):
+        if self.action == "list":
+            return AirplaneListSerializer
+        elif self.action == "retrieve":
+            return AirplaneRetrieveSerializer
+        return AirplaneSerializer
+
+    def get_queryset(self):
+        queryset = self.queryset
+        if self.action in ("list", "retrieve"):
+            return queryset.select_related()
+
+        return queryset
+
 
 class CrewViewSet(viewsets.ModelViewSet):
     queryset = Crew.objects.all()
@@ -38,13 +52,37 @@ class CrewViewSet(viewsets.ModelViewSet):
 
 
 class FlightViewSet(viewsets.ModelViewSet):
-    queryset = Flight.objects.all()
-    serializer_class = FlightSerializer
+    queryset = Flight.objects.all().select_related()
+    serializer_class = FlightListSerializer
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return FlightListSerializer
+        return FlightSerializer
+
+    def get_queryset(self):
+        queryset = self.queryset
+        if self.action == "list":
+            return queryset.select_related()
+
+        return queryset
 
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
+
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user)
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return OrderListSerializer
+
+        return OrderSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class TicketViewSet(viewsets.ModelViewSet):
