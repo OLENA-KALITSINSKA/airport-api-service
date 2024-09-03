@@ -64,7 +64,7 @@ class AirplaneRetrieveSerializer(AirplaneSerializer):
 class CrewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Crew
-        fields = ["id", "first_name", "last_name"]
+        fields = ["id", "full_name"]
 
 
 class FlightSerializer(serializers.ModelSerializer):
@@ -100,14 +100,14 @@ class FlightListSerializer(FlightSerializer):
         ]
 
 
-class FlightDetailSerializer(FlightSerializer):
+class FlightDetailSerializer(FlightListSerializer):
     crew = CrewSerializer(many=True)
     airplane = AirplaneSerializer()
     route = RouteSerializer()
 
 
 class TicketSerializer(serializers.ModelSerializer):
-    flight = FlightSerializer()
+    flight = serializers.PrimaryKeyRelatedField(queryset=Flight.objects.all())
     order = serializers.PrimaryKeyRelatedField(read_only=True)
 
     def validate(self, attrs):
@@ -130,19 +130,19 @@ class TicketListSerializer(TicketSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
-    tickets = TicketSerializer(many=True, read_only=True)
+    #tickets = TicketSerializer(many=True)
 
     class Meta:
         model = Order
         fields = ["id", "created_at", "user", "tickets"]
 
     def create(self, validated_data):
+        tickets_data = validated_data.pop('tickets')
         with transaction.atomic():
-            tickets_data = validated_data.pop("tickets")
             order = Order.objects.create(**validated_data)
             for ticket_data in tickets_data:
                 Ticket.objects.create(order=order, **ticket_data)
-            return order
+        return order
 
 
 class OrderListSerializer(OrderSerializer):

@@ -1,5 +1,9 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, mixins, status
 from django.db.models import F, Count
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
+
 from .models import (
     Airport,
     Route,
@@ -7,7 +11,7 @@ from .models import (
     Airplane,
     Crew,
     Flight,
-    Order,
+    Order, Ticket,
 )
 from .serializers import (
     AirportSerializer,
@@ -20,7 +24,7 @@ from .serializers import (
     FlightListSerializer,
     OrderListSerializer,
     AirplaneListSerializer,
-    AirplaneRetrieveSerializer, FlightDetailSerializer,
+    AirplaneRetrieveSerializer, FlightDetailSerializer, TicketSerializer,
 )
 
 
@@ -86,13 +90,20 @@ class FlightViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = self.queryset
         if self.action == "list":
-            return queryset.select_related("route", "airplane").prefetch_related("crew")
+            return queryset.select_related(
+                "route",
+                "airplane"
+            ).prefetch_related("crew")
 
         return queryset
 
 
-class OrderViewSet(viewsets.ModelViewSet):
-    serializer_class = OrderSerializer
+class OrderViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
+    permission_classes = (IsAuthenticated,)
     queryset = Order.objects.prefetch_related(
         "tickets__flight", "tickets__flight__airplane"
     )
@@ -103,11 +114,20 @@ class OrderViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == "list":
             return OrderListSerializer
-
         return OrderSerializer
 
     def perform_create(self, serializer):
+        # Save the Order object with the user attached
         serializer.save(user=self.request.user)
 
 
+class TicketViewSet(viewsets.ModelViewSet):
+    queryset = Ticket.objects.all()
+    serializer_class = TicketSerializer
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
