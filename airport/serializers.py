@@ -107,8 +107,6 @@ class FlightDetailSerializer(FlightListSerializer):
 
 
 class TicketSerializer(serializers.ModelSerializer):
-    flight = serializers.PrimaryKeyRelatedField(queryset=Flight.objects.all())
-    order = serializers.PrimaryKeyRelatedField(read_only=True)
 
     def validate(self, attrs):
         data = super(TicketSerializer, self).validate(attrs=attrs)
@@ -122,7 +120,7 @@ class TicketSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Ticket
-        fields = ["id", "row", "seat", "flight", "order"]
+        fields = ["id", "row", "seat", "flight"]
 
 
 class TicketListSerializer(TicketSerializer):
@@ -130,19 +128,19 @@ class TicketListSerializer(TicketSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
-    #tickets = TicketSerializer(many=True)
+    tickets = TicketSerializer(many=True, read_only=False, allow_empty=False)
 
     class Meta:
         model = Order
-        fields = ["id", "created_at", "user", "tickets"]
+        fields = ("id", "tickets", "created_at")
 
     def create(self, validated_data):
-        tickets_data = validated_data.pop('tickets')
         with transaction.atomic():
+            tickets_data = validated_data.pop("tickets")
             order = Order.objects.create(**validated_data)
             for ticket_data in tickets_data:
                 Ticket.objects.create(order=order, **ticket_data)
-        return order
+            return order
 
 
 class OrderListSerializer(OrderSerializer):

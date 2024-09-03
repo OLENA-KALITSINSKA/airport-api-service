@@ -1,3 +1,7 @@
+from datetime import datetime
+
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import viewsets, mixins, status
 from django.db.models import F, Count
 from rest_framework.permissions import IsAuthenticated
@@ -24,7 +28,7 @@ from .serializers import (
     FlightListSerializer,
     OrderListSerializer,
     AirplaneListSerializer,
-    AirplaneRetrieveSerializer, FlightDetailSerializer, TicketSerializer,
+    AirplaneRetrieveSerializer, FlightDetailSerializer
 )
 
 
@@ -34,7 +38,7 @@ class AirportViewSet(viewsets.ModelViewSet):
 
 
 class RouteViewSet(viewsets.ModelViewSet):
-    queryset = Route.objects.all()
+    queryset = Route.objects.select_related('source', 'destination').all()
     serializer_class = RouteSerializer
 
 
@@ -68,34 +72,66 @@ class CrewViewSet(viewsets.ModelViewSet):
 
 
 class FlightViewSet(viewsets.ModelViewSet):
-    queryset = (
-        Flight.objects.all()
-        .select_related("airplane", "route")
-        .annotate(
-            tickets_available=(
-                F("airplane__rows") * F("airplane__seats_in_row")
-                - Count("tickets")
-            )
+    queryset = Flight.objects.all().select_related(
+        'airplane',
+        'route'
+    ).prefetch_related('crew').annotate(
+        tickets_available=(
+            F('airplane__rows') * F('airplane__seats_in_row') - Count('tickets')
         )
     )
+
     serializer_class = FlightListSerializer
 
     def get_serializer_class(self):
         if self.action == "list":
             return FlightListSerializer
-        elif self.action == "retrieve":
+
+        if self.action == "retrieve":
             return FlightDetailSerializer
+
         return FlightSerializer
 
     def get_queryset(self):
+        departure_date = self.request.query_params.get("departure_date")
+        airplane_id_str = self.request.query_params.get("airplane")
+        route_id_str = self.request.query_params.get("route")
+
         queryset = self.queryset
-        if self.action == "list":
-            return queryset.select_related(
-                "route",
-                "airplane"
-            ).prefetch_related("crew")
+
+        if departure_date:
+            departure_date = datetime.strptime(departure_date, "%Y-%m-%d").date()
+            queryset = queryset.filter(departure_time__date=departure_date)
+
+        if airplane_id_str:
+            queryset = queryset.filter(airplane_id=int(airplane_id_str))
+
+        if route_id_str:
+            queryset = queryset.filter(route_id=int(route_id_str))
 
         return queryset
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "departure_date",
+                type=OpenApiTypes.DATE,
+                description="Filter by departure date (ex. ?departure_date=2024-09-01)",
+            ),
+            OpenApiParameter(
+                "airplane",
+                type=OpenApiTypes.INT,
+                description="Filter by airplane id (ex. ?airplane=1)",
+            ),
+            OpenApiParameter(
+                "route",
+                type=OpenApiTypes.INT,
+                description="Filter by route id (ex. ?route=3)",
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 
 class OrderViewSet(
@@ -104,12 +140,15 @@ class OrderViewSet(
     viewsets.GenericViewSet,
 ):
     permission_classes = (IsAuthenticated,)
-    queryset = Order.objects.prefetch_related(
-        "tickets__flight", "tickets__flight__airplane"
-    )
+    queryset = Order.objects.none()
 
     def get_queryset(self):
-        return Order.objects.filter(user=self.request.user)
+        return Order.objects.filter(user=self.request.user).select_related(
+            "user"
+        ).prefetch_related(
+            "tickets__flight__airplane",
+            "tickets__flight__route"
+        )
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -117,17 +156,4 @@ class OrderViewSet(
         return OrderSerializer
 
     def perform_create(self, serializer):
-        # Save the Order object with the user attached
         serializer.save(user=self.request.user)
-
-
-class TicketViewSet(viewsets.ModelViewSet):
-    queryset = Ticket.objects.all()
-    serializer_class = TicketSerializer
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
