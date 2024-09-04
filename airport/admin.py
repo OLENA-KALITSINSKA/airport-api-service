@@ -8,7 +8,7 @@ from .models import (
     Crew,
     Flight,
     Order,
-    Ticket,
+    Ticket, TicketClass,
 )
 
 admin.site.register(Airport)
@@ -19,3 +19,4 @@ admin.site.register(Crew)
 admin.site.register(Flight)
 admin.site.register(Order)
 admin.site.register(Ticket)
+admin.site.register(TicketClass)

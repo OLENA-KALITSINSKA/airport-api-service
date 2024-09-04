@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from .models import (
@@ -9,7 +10,8 @@ from .models import (
     Crew,
     Flight,
     Ticket,
-    Order
+    Order,
+    TicketClass
 )
 
 
@@ -81,6 +83,14 @@ class FlightSerializer(serializers.ModelSerializer):
             "duration"
         ]
 
+    @staticmethod
+    def validate_departure_time(value):
+        if value < timezone.now():
+            raise serializers.ValidationError(
+                "Departure time cannot be in the past."
+            )
+        return value
+
 
 class FlightListSerializer(FlightSerializer):
     crew = CrewSerializer(many=True)
@@ -100,13 +110,17 @@ class FlightListSerializer(FlightSerializer):
         ]
 
 
-class FlightDetailSerializer(FlightListSerializer):
-    crew = CrewSerializer(many=True)
-    airplane = AirplaneSerializer()
-    route = RouteSerializer()
+class TicketClassSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TicketClass
+        fields = "__all__"
 
 
 class TicketSerializer(serializers.ModelSerializer):
+    ticket_class = serializers.SlugRelatedField(
+        queryset=TicketClass.objects.all(),
+        slug_field='name'
+    )
 
     def validate(self, attrs):
         data = super(TicketSerializer, self).validate(attrs=attrs)
@@ -120,15 +134,42 @@ class TicketSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Ticket
-        fields = ["id", "row", "seat", "flight"]
+        fields = ["id", "row", "seat", "flight", "ticket_class"]
 
 
 class TicketListSerializer(TicketSerializer):
     flight = FlightListSerializer(many=False, read_only=True)
 
 
+class TicketSeatsSerializer(TicketSerializer):
+    class Meta:
+        model = Ticket
+        fields = ("row", "seat")
+
+
+class FlightDetailSerializer(FlightListSerializer):
+    crew = CrewSerializer(many=True)
+    airplane = AirplaneSerializer()
+    route = RouteSerializer()
+    taken_places = TicketSeatsSerializer(
+        source="tickets", many=True, read_only=True
+    )
+
+    class Meta:
+        model = Flight
+        fields = (
+            "id",
+            "route",
+            "airplane",
+            "crew",
+            "departure_time",
+            "arrival_time",
+            "taken_places"
+        )
+
+
 class OrderSerializer(serializers.ModelSerializer):
-    tickets = TicketSerializer(many=True, read_only=False, allow_empty=False)
+    tickets = TicketListSerializer(many=True, read_only=False, allow_empty=False)
 
     class Meta:
         model = Order

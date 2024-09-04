@@ -2,20 +2,21 @@ from datetime import datetime
 
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework import viewsets, mixins, status
+from rest_framework import viewsets, mixins
 from django.db.models import F, Count
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.viewsets import GenericViewSet
 
-from .models import (
+
+from airport.models import (
     Airport,
     Route,
     AirplaneType,
     Airplane,
     Crew,
     Flight,
-    Order, Ticket,
+    Order,
+    TicketClass,
 )
 from .serializers import (
     AirportSerializer,
@@ -28,13 +29,20 @@ from .serializers import (
     FlightListSerializer,
     OrderListSerializer,
     AirplaneListSerializer,
-    AirplaneRetrieveSerializer, FlightDetailSerializer
+    AirplaneRetrieveSerializer,
+    FlightDetailSerializer,
+    TicketClassSerializer
 )
 
 
 class AirportViewSet(viewsets.ModelViewSet):
     queryset = Airport.objects.all()
     serializer_class = AirportSerializer
+
+
+class TicketClassViewSet(viewsets.ModelViewSet):
+    queryset = TicketClass.objects.all()
+    serializer_class = TicketClassSerializer
 
 
 class RouteViewSet(viewsets.ModelViewSet):
@@ -71,13 +79,21 @@ class CrewViewSet(viewsets.ModelViewSet):
     serializer_class = CrewSerializer
 
 
+class FlightPagination(PageNumberPagination):
+    page_size = 10
+    max_page_size = 100
+
+
 class FlightViewSet(viewsets.ModelViewSet):
-    queryset = Flight.objects.all().select_related(
-        'airplane',
-        'route'
-    ).prefetch_related('crew').annotate(
-        tickets_available=(
-            F('airplane__rows') * F('airplane__seats_in_row') - Count('tickets')
+    queryset = (
+        Flight.objects.all()
+        .select_related('airplane', 'route')
+        .prefetch_related('crew')
+        .annotate(
+            tickets_available=(
+                F('airplane__rows') * F('airplane__seats_in_row')
+                - Count('tickets')
+            )
         )
     )
 
@@ -100,7 +116,10 @@ class FlightViewSet(viewsets.ModelViewSet):
         queryset = self.queryset
 
         if departure_date:
-            departure_date = datetime.strptime(departure_date, "%Y-%m-%d").date()
+            departure_date = datetime.strptime(
+                departure_date,
+                "%Y-%m-%d"
+            ).date()
             queryset = queryset.filter(departure_time__date=departure_date)
 
         if airplane_id_str:
@@ -116,7 +135,8 @@ class FlightViewSet(viewsets.ModelViewSet):
             OpenApiParameter(
                 "departure_date",
                 type=OpenApiTypes.DATE,
-                description="Filter by departure date (ex. ?departure_date=2024-09-01)",
+                description="Filter by departure date "
+                            "(ex. ?departure_date=2024-09-01)",
             ),
             OpenApiParameter(
                 "airplane",
@@ -132,6 +152,11 @@ class FlightViewSet(viewsets.ModelViewSet):
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
+
+
+class OrderPagination(PageNumberPagination):
+    page_size = 10
+    max_page_size = 100
 
 
 class OrderViewSet(

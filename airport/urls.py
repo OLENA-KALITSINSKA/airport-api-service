@@ -8,11 +8,12 @@ from airport.views import (
     AirplaneViewSet,
     CrewViewSet,
     FlightViewSet,
-    OrderViewSet,
+    OrderViewSet, TicketClassViewSet,
 )
 
 router = DefaultRouter()
 router.register('airports', AirportViewSet)
+router.register('ticket_class', TicketClassViewSet)
 router.register('routes', RouteViewSet)
 router.register('airplane_types', AirplaneTypeViewSet)
 router.register('airplanes', AirplaneViewSet)
