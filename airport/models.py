@@ -83,6 +83,30 @@ class Order(models.Model):
         ordering = ["-created_at"]
 
 
+class TicketClass(models.Model):
+    ECONOMY = 'economy'
+    BUSINESS = 'business'
+    FIRST_CLASS = 'first_class'
+    PREMIUM_ECONOMY = 'premium_economy'
+
+    TICKET_CLASS_CHOICES = [
+        (ECONOMY, 'Economy'),
+        (BUSINESS, 'Business'),
+        (FIRST_CLASS, 'First Class'),
+        (PREMIUM_ECONOMY, 'Premium Economy'),
+    ]
+
+    name = models.CharField(max_length=20, choices=TICKET_CLASS_CHOICES, unique=True)
+    price_multiplier = models.FloatField(default=1.0)
+    baggage_allowance = models.IntegerField(default=20)  # Вага в кг
+    cancellation_policy = models.TextField()
+    meal_service = models.BooleanField(default=False)
+    priority_boarding = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.get_name_display()
+
+
 class Ticket(models.Model):
     row = models.IntegerField()
     seat = models.IntegerField()
@@ -92,6 +116,7 @@ class Ticket(models.Model):
     order = models.ForeignKey(
         Order, on_delete=models.CASCADE, related_name="tickets"
     )
+    ticket_class = models.ForeignKey(TicketClass, on_delete=models.SET_NULL, null=True, blank=True)
 
     @staticmethod
     def validate_ticket(row, seat, airplane, error_to_raise):
