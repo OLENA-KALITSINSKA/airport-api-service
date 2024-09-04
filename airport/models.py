@@ -12,12 +12,30 @@ class Airport(models.Model):
 
 
 class Route(models.Model):
-    source = models.ForeignKey(Airport, on_delete=models.CASCADE, related_name='departing_routes')
-    destination = models.ForeignKey(Airport, on_delete=models.CASCADE, related_name='arriving_routes')
+    source = models.ForeignKey(
+        Airport,
+        on_delete=models.CASCADE,
+        related_name='departing_routes'
+    )
+    destination = models.ForeignKey(
+        Airport,
+        on_delete=models.CASCADE,
+        related_name='arriving_routes'
+    )
     distance = models.IntegerField()
 
     def __str__(self):
         return f"{self.source.name} to {self.destination.name}"
+
+    def clean(self):
+        if self.source == self.destination:
+            raise ValidationError(
+                "Source and destination airports cannot be the same."
+            )
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
 
 class AirplaneType(models.Model):
@@ -71,6 +89,16 @@ class Flight(models.Model):
         delta = self.arrival_time - self.departure_time
         return delta.total_seconds() / 60
 
+    def clean(self):
+        if self.arrival_time <= self.departure_time:
+            raise ValidationError(
+                "Arrival time must be later than departure time."
+            )
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
 
 class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
@@ -96,15 +124,19 @@ class TicketClass(models.Model):
         (PREMIUM_ECONOMY, 'Premium Economy'),
     ]
 
-    name = models.CharField(max_length=20, choices=TICKET_CLASS_CHOICES, unique=True)
+    name = models.CharField(
+        max_length=20,
+        choices=TICKET_CLASS_CHOICES,
+        unique=True
+    )
     price_multiplier = models.FloatField(default=1.0)
-    baggage_allowance = models.IntegerField(default=20)  # Вага в кг
+    baggage_allowance = models.IntegerField(default=20)
     cancellation_policy = models.TextField()
     meal_service = models.BooleanField(default=False)
     priority_boarding = models.BooleanField(default=False)
 
     def __str__(self):
-        return self.get_name_display()
+        return self.name
 
 
 class Ticket(models.Model):
@@ -116,7 +148,12 @@ class Ticket(models.Model):
     order = models.ForeignKey(
         Order, on_delete=models.CASCADE, related_name="tickets"
     )
-    ticket_class = models.ForeignKey(TicketClass, on_delete=models.SET_NULL, null=True, blank=True)
+    ticket_class = models.ForeignKey(
+        TicketClass,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
 
     @staticmethod
     def validate_ticket(row, seat, airplane, error_to_raise):
