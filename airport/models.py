@@ -1,5 +1,9 @@
+import os
+import uuid
+
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
+from django.utils.text import slugify
 from rest_framework.exceptions import ValidationError
 
 
@@ -38,6 +42,20 @@ class Route(models.Model):
         super().save(*args, **kwargs)
 
 
+def airline_image_file_path(instance, filename):
+    _, extension = os.path.splitext(filename)
+    filename = f"{slugify(instance.name)}-{uuid.uuid4()}.{extension}"
+    return os.path.join("uploads/airplanes/", filename)
+
+
+class Airline(models.Model):
+    name = models.CharField(max_length=100)
+    logo = models.ImageField(null=True, upload_to=airline_image_file_path)
+
+    def __str__(self):
+        return self.name
+
+
 class AirplaneType(models.Model):
     name = models.CharField(max_length=100)
 
@@ -50,6 +68,11 @@ class Airplane(models.Model):
     rows = models.IntegerField()
     seats_in_row = models.IntegerField()
     airplane_type = models.ForeignKey(AirplaneType, on_delete=models.CASCADE)
+    airline = models.ForeignKey(
+        Airline,
+        null=True,
+        on_delete=models.SET_NULL
+    )
 
     def __str__(self):
         return self.name
@@ -62,9 +85,10 @@ class Airplane(models.Model):
 class Crew(models.Model):
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
+    position = models.CharField(max_length=255)
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name}"
+        return f"{self.first_name} {self.last_name}: {self.position}"
 
     @property
     def full_name(self):
@@ -102,7 +126,10 @@ class Flight(models.Model):
 
 class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE
+    )
 
     def __str__(self):
         return f"Order {self.id} by {self.user}"

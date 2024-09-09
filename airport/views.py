@@ -1,12 +1,15 @@
 from datetime import datetime
 
+from django.db.models import F, Count
+from rest_framework import viewsets, mixins, status
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
+
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework import viewsets, mixins
-from django.db.models import F, Count
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.viewsets import GenericViewSet
 
 from airport.models import (
     Airport,
@@ -16,7 +19,7 @@ from airport.models import (
     Crew,
     Flight,
     Order,
-    TicketClass,
+    TicketClass, Airline,
 )
 from .permissions import IsAdminOrIfAuthenticatedReadOnly
 from .serializers import (
@@ -32,7 +35,7 @@ from .serializers import (
     AirplaneListSerializer,
     AirplaneRetrieveSerializer,
     FlightDetailSerializer,
-    TicketClassSerializer
+    TicketClassSerializer, AirlineImageSerializer, AirlineSerializer,
 )
 
 
@@ -66,14 +69,37 @@ class RouteViewSet(
     permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
 
 
-class AirplaneTypeViewSet(
-    mixins.CreateModelMixin,
-    mixins.ListModelMixin,
-    GenericViewSet,
-):
+class AirplaneTypeViewSet(viewsets.ModelViewSet):
     queryset = AirplaneType.objects.all()
     serializer_class = AirplaneTypeSerializer
     permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
+
+
+class AirlineViewSet(viewsets.ModelViewSet):
+    queryset = Airline.objects.all()
+    serializer_class = AirlineSerializer
+    permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
+
+    def get_serializer_class(self):
+        if self.action == "upload_image":
+            return AirlineImageSerializer
+        return AirlineSerializer
+
+    @action(
+        methods=["POST"],
+        detail=True,
+        url_path="upload-image",
+        permission_classes=[IsAdminUser],
+    )
+    def upload_image(self, request, pk=None):
+        airline = self.get_object()
+        serializer = self.get_serializer(airline, data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AirplaneViewSet(viewsets.ModelViewSet):
@@ -89,11 +115,35 @@ class AirplaneViewSet(viewsets.ModelViewSet):
         return AirplaneSerializer
 
     def get_queryset(self):
+        name = self.request.query_params.get("name")
+        airplane_type = self.request.query_params.get("airplane_type")
         queryset = self.queryset
+        if name:
+            queryset = queryset.filter(name__icontains=name)
+        if airplane_type:
+            queryset = queryset.filter(
+                airplane_type__name__icontains=airplane_type
+            )
         if self.action in ("list", "retrieve"):
             return queryset.select_related("airplane_type")
-
         return queryset
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "name",
+                type=OpenApiTypes.STR,
+                description="Filter by airplane name (ex. ?name=Boeing)",
+            ),
+            OpenApiParameter(
+                "airplane_type",
+                type=OpenApiTypes.STR,
+                description="Filter by airplane type (ex. ?airplane_type=Jet)",
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 
 class CrewViewSet(
@@ -123,17 +173,14 @@ class FlightViewSet(viewsets.ModelViewSet):
             )
         )
     )
-
     serializer_class = FlightListSerializer
     permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
 
     def get_serializer_class(self):
         if self.action == "list":
             return FlightListSerializer
-
         if self.action == "retrieve":
             return FlightDetailSerializer
-
         return FlightSerializer
 
     def get_queryset(self):
@@ -141,12 +188,11 @@ class FlightViewSet(viewsets.ModelViewSet):
         airplane_id_str = self.request.query_params.get("airplane")
         route_id_str = self.request.query_params.get("route")
 
-        queryset = self.queryset
+        queryset = super().get_queryset()
 
         if departure_date:
             departure_date = datetime.strptime(
-                departure_date,
-                "%Y-%m-%d"
+                departure_date, "%Y-%m-%d"
             ).date()
             queryset = queryset.filter(departure_time__date=departure_date)
 
