@@ -37,7 +37,6 @@ class AirplaneTypeSerializer(serializers.ModelSerializer):
 
 
 class AirplaneSerializer(serializers.ModelSerializer):
-    airplane_type = AirplaneTypeSerializer()
 
     class Meta:
         model = Airplane
@@ -82,14 +81,6 @@ class FlightSerializer(serializers.ModelSerializer):
             "crew",
             "duration"
         ]
-
-    @staticmethod
-    def validate_departure_time(value):
-        if value < timezone.now():
-            raise serializers.ValidationError(
-                "Departure time cannot be in the past."
-            )
-        return value
 
 
 class FlightListSerializer(FlightSerializer):
@@ -147,7 +138,7 @@ class TicketSeatsSerializer(TicketSerializer):
         fields = ("row", "seat")
 
 
-class FlightDetailSerializer(FlightListSerializer):
+class FlightDetailSerializer(FlightSerializer):
     crew = CrewSerializer(many=True)
     airplane = AirplaneSerializer()
     route = RouteSerializer()
@@ -174,6 +165,11 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ("id", "tickets", "created_at")
+
+    def validate(self, value):
+        if not value:
+            raise serializers.ValidationError("At least one ticket is required.")
+        return value
 
     def create(self, validated_data):
         with transaction.atomic():
