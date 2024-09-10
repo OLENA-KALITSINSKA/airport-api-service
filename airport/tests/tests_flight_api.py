@@ -116,55 +116,55 @@ class AuthenticatedFlightApiTests(TestCase):
 
     def test_filter_by_departure_date(self):
         date_str = self.flight1.departure_time.date().isoformat()
-        response = self.client.get(FLIGHT_URL, {'departure_date': date_str})
+        response = self.client.get(FLIGHT_URL, {"departure_date": date_str})
         data = response.data
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(
-            all(flight['departure_time']
+            all(flight["departure_time"]
                 .startswith(date_str) for flight in data)
         )
 
     def test_filter_by_airplane(self):
         self.airplane = sample_airplane()
         response = self.client.get(
-            FLIGHT_URL, {'airplane': self.airplane.id}
+            FLIGHT_URL, {"airplane": self.airplane.id}
         )
         data = response.data
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(
-            all(flight['airplane'] == self.airplane.id for flight in data)
+            all(flight["airplane"] == self.airplane.id for flight in data)
         )
 
     def test_filter_by_route(self):
-        response = self.client.get(FLIGHT_URL, {'route': self.route.id})
+        response = self.client.get(FLIGHT_URL, {"route": self.route.id})
         data = response.data
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(
-            all(flight['route'] == self.route.id for flight in data)
+            all(flight["route"] == self.route.id for flight in data)
         )
 
     def test_filter_by_multiple_params(self):
         departure_date = self.flight1.departure_time.date()
         response = self.client.get(FLIGHT_URL, {
-            'departure_date': departure_date,
-            'airplane': self.airplane.id,
-            'route': self.route.id
+            "departure_date": departure_date,
+            "airplane": self.airplane.id,
+            "route": self.route.id
         })
         data = response.data
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(
-            all(flight['departure_time']
+            all(flight["departure_time"]
                 .startswith(departure_date) for flight in data)
         )
         self.assertTrue(
-            all(flight['airplane'] == self.airplane.id for flight in data)
+            all(flight["airplane"] == self.airplane.id for flight in data)
         )
         self.assertTrue(
-            all(flight['route'] == self.route.id for flight in data)
+            all(flight["route"] == self.route.id for flight in data)
         )
 
 

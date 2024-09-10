@@ -8,10 +8,13 @@ from .models import (
     Crew,
     Flight,
     Order,
-    Ticket, TicketClass,
+    Ticket,
+    TicketClass,
+    Airline,
 )
 
 admin.site.register(Airport)
+admin.site.register(Airline)
 admin.site.register(Airplane)
 admin.site.register(AirplaneType)
 admin.site.register(Route)

@@ -11,7 +11,8 @@ from .models import (
     Flight,
     Ticket,
     Order,
-    TicketClass, Airline
+    TicketClass,
+    Airline
 )
 
 
@@ -136,7 +137,7 @@ class TicketClassSerializer(serializers.ModelSerializer):
 class TicketSerializer(serializers.ModelSerializer):
     ticket_class = serializers.SlugRelatedField(
         queryset=TicketClass.objects.all(),
-        slug_field='name'
+        slug_field="name"
     )
 
     def validate(self, attrs):

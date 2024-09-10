@@ -91,7 +91,6 @@ class AuthenticatedAirplaneApiTests(TestCase):
         airplane_type2 = AirplaneType.objects.create(name="Type B")
 
         airplane1 = sample_airplane(airplane_type=airplane_type1)
-        airplane2 = sample_airplane(airplane_type=airplane_type2)
         sample_airplane(airplane_type=airplane_type1)
 
         response = self.client.get(AIRPLANE_URL, {"airplane_type": "Type A"})
@@ -146,7 +145,7 @@ class AdminAirplaneApiTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
 
 
-class MovieImageUploadTests(TestCase):
+class AirlineImageUploadTests(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.user = get_user_model().objects.create_superuser(
@@ -160,7 +159,6 @@ class MovieImageUploadTests(TestCase):
         self.airline.logo.delete()
 
     def test_upload_image_to_airline(self):
-        """Test uploading an image to movie"""
         url = image_upload_url(self.airline.id)
         with tempfile.NamedTemporaryFile(suffix=".jpg") as ntf:
             img = Image.new("RGB", (10, 10))

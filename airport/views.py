@@ -64,7 +64,7 @@ class RouteViewSet(
     mixins.ListModelMixin,
     GenericViewSet,
 ):
-    queryset = Route.objects.select_related('source', 'destination').all()
+    queryset = Route.objects.select_related("source", "destination").all()
     serializer_class = RouteSerializer
     permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
 
@@ -164,12 +164,12 @@ class FlightPagination(PageNumberPagination):
 class FlightViewSet(viewsets.ModelViewSet):
     queryset = (
         Flight.objects.all()
-        .select_related('airplane', 'route')
-        .prefetch_related('crew')
+        .select_related("airplane", "route")
+        .prefetch_related("crew")
         .annotate(
             tickets_available=(
-                F('airplane__rows') * F('airplane__seats_in_row')
-                - Count('tickets')
+                F("airplane__rows") * F("airplane__seats_in_row")
+                - Count("tickets")
             )
         )
     )

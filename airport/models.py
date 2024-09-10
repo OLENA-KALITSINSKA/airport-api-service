@@ -19,12 +19,12 @@ class Route(models.Model):
     source = models.ForeignKey(
         Airport,
         on_delete=models.CASCADE,
-        related_name='departing_routes'
+        related_name="departing_routes"
     )
     destination = models.ForeignKey(
         Airport,
         on_delete=models.CASCADE,
-        related_name='arriving_routes'
+        related_name="arriving_routes"
     )
     distance = models.IntegerField()
 
@@ -100,7 +100,7 @@ class Flight(models.Model):
     airplane = models.ForeignKey(Airplane, on_delete=models.CASCADE)
     departure_time = models.DateTimeField()
     arrival_time = models.DateTimeField()
-    crew = models.ManyToManyField(Crew, related_name='flights')
+    crew = models.ManyToManyField(Crew, related_name="flights")
 
     def __str__(self):
         return f"Flight on {self.route} at {self.departure_time}"
@@ -139,16 +139,16 @@ class Order(models.Model):
 
 
 class TicketClass(models.Model):
-    ECONOMY = 'economy'
-    BUSINESS = 'business'
-    FIRST_CLASS = 'first_class'
-    PREMIUM_ECONOMY = 'premium_economy'
+    ECONOMY = "economy"
+    BUSINESS = "business"
+    FIRST_CLASS = "first_class"
+    PREMIUM_ECONOMY = "premium_economy"
 
     TICKET_CLASS_CHOICES = [
-        (ECONOMY, 'Economy'),
-        (BUSINESS, 'Business'),
-        (FIRST_CLASS, 'First Class'),
-        (PREMIUM_ECONOMY, 'Premium Economy'),
+        (ECONOMY, "Economy"),
+        (BUSINESS, "Business"),
+        (FIRST_CLASS, "First Class"),
+        (PREMIUM_ECONOMY, "Premium Economy"),
     ]
 
     name = models.CharField(
