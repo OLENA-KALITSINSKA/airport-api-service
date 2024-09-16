@@ -19,7 +19,8 @@ from airport.models import (
     Crew,
     Flight,
     Order,
-    TicketClass, Airline,
+    TicketClass,
+    Airline,
 )
 from .permissions import IsAdminOrIfAuthenticatedReadOnly
 from .serializers import (
@@ -35,7 +36,9 @@ from .serializers import (
     AirplaneListSerializer,
     AirplaneRetrieveSerializer,
     FlightDetailSerializer,
-    TicketClassSerializer, AirlineImageSerializer, AirlineSerializer,
+    TicketClassSerializer,
+    AirlineImageSerializer,
+    AirlineSerializer,
 )
 
 
