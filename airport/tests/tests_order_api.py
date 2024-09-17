@@ -1,4 +1,5 @@
 from unittest import TestCase
+
 from rest_framework import status
 from rest_framework.test import APIClient
 from django.urls import reverse
@@ -6,6 +7,7 @@ from django.contrib.auth import get_user_model
 
 from airport.models import Order, Ticket, TicketClass
 from airport.serializers import OrderListSerializer
+
 from airport.tests.tests_flight_api import sample_flight
 
 ORDER_URL = reverse("airport:order-list")

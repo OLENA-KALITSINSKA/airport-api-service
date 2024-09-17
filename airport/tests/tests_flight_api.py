@@ -7,6 +7,7 @@ from rest_framework import status
 
 from airport.models import Crew, Route, Flight
 from airport.serializers import FlightListSerializer
+
 from airport.tests.tests_airplane_api import sample_airplane
 from airport.tests.tests_airport_api import sample_airport
 
