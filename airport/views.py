@@ -22,8 +22,8 @@ from airport.models import (
     TicketClass,
     Airline,
 )
-from .permissions import IsAdminOrIfAuthenticatedReadOnly
-from .serializers import (
+from airport.permissions import IsAdminOrIfAuthenticatedReadOnly
+from airport.serializers import (
     AirportSerializer,
     RouteSerializer,
     AirplaneTypeSerializer,
