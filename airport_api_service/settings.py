@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 import os
+from datetime import timedelta
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -86,6 +87,13 @@ WSGI_APPLICATION = "airport_api_service.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.sqlite3",
+#         "NAME": BASE_DIR / "db.sqlite3",
+#     }
+# }
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -136,7 +144,8 @@ USE_TZ = False
 
 STATIC_URL = "static/"
 
-MEDIA_ROOT = BASE_DIR / "media"
+# MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = "/vol/web/media"
 
 MEDIA_URL = "/media/"
 
@@ -168,4 +177,10 @@ SPECTACULAR_SETTINGS = {
         "defaultModelsExpandDepth": 2,
         "defaultModelExpandDepth": 2,
     },
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=300),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ROTATE_REFRESH_TOKENS": False,
 }
